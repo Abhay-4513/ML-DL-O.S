@@ -10,7 +10,10 @@ from sklearn.tree import DecisionTreeRegressor
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
-
+# Load dataset
+data = load_diabetes()
+X = pd.DataFrame(data.data, columns=data.feature_names)
+y = data.target
 
 print('Dataset shape:', X.shape)
 print('Target: disease progression score (higher more progression)')
