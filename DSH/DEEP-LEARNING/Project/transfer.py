@@ -1,17 +1,3 @@
-"""
-Part (b): Transfer learning with pre-trained CNNs (ResNet / VGG / any torchvision classifier).
-Compares four strategies on a target dataset:
-  scratch            - random init, train everything (baseline)
-  feature_extraction - freeze backbone, train only the new classification head
-  finetune_last      - unfreeze last block + head
-  finetune_all       - unfreeze everything, smaller LR for the pre-trained backbone (discriminative LRs)
-
-Dataset: by default Oxford Flowers-102 (small -> transfer learning matters).
-For a custom dataset, pass --data_dir with  train/<class>/*.jpg  and  val/<class>/*.jpg.
-
-Run: python part_b_transfer.py --model resnet18 --epochs 10
-     python part_b_transfer.py --model vgg16 --data_dir ./my_dataset
-"""
 import argparse, json, os, time
 import torch, torch.nn as nn
 from torch.utils.data import DataLoader
@@ -42,12 +28,12 @@ def get_data(args):
 def build_model(name, strategy, n_cls):
     m = models.get_model(name, weights=None if strategy == "scratch" else "DEFAULT")
     # replace classification head
-    if hasattr(m, "fc"):                                   # ResNet family
+    if hasattr(m, "fc"):
         m.fc = nn.Linear(m.fc.in_features, n_cls); head = list(m.fc.parameters())
         last_block = list(m.layer4.parameters())
-    else:                                                  # VGG family (classifier[-1] is the last Linear)
+    else:
         m.classifier[-1] = nn.Linear(m.classifier[-1].in_features, n_cls); head = list(m.classifier[-1].parameters())
-        last_block = list(m.features[24:].parameters()) + list(m.classifier[:-1].parameters())  # conv block 5 + FC layers
+        last_block = list(m.features[24:].parameters()) + list(m.classifier[:-1].parameters())
     head_ids = {id(p) for p in head}; last_ids = {id(p) for p in last_block}
     backbone = [p for p in m.parameters() if id(p) not in head_ids]
 
@@ -87,7 +73,7 @@ def run(strategy, args, tl, vl, n_cls, device):
     print(f"\n=== {args.model} | {strategy} | trainable params: {trainable/1e6:.2f}M ===")
     for ep in range(1, args.epochs + 1):
         model.train()
-        if strategy == "feature_extraction": freeze_bn(model)   # keep pre-trained BN statistics
+        if strategy == "feature_extraction": freeze_bn(model)
         tot = 0.0
         for x, y in tl:
             x, y = x.to(device), y.to(device)
@@ -109,7 +95,8 @@ def main():
     p.add_argument("--lr", type=float, default=0.01); p.add_argument("--workers", type=int, default=4)
     p.add_argument("--strategies", nargs="+", default=STRATEGIES, choices=STRATEGIES)
     p.add_argument("--out", default="outputs_b")
-    a = p.parse_args(); os.makedirs(a.out, exist_ok=True)
+    # Use parse_known_args() so that Jupyter's automatic backend arguments (-f) are safely ignored
+    a, _ = p.parse_known_args(); os.makedirs(a.out, exist_ok=True)
     device = "cuda" if torch.cuda.is_available() else ("mps" if torch.backends.mps.is_available() else "cpu")
     tl, vl, n_cls = get_data(a)
     results = {s: run(s, a, tl, vl, n_cls, device) for s in a.strategies}
