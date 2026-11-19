@@ -1,17 +1,3 @@
-"""
-Part (c): GANs on MNIST. Three variants are trained and compared:
-  vanilla : MLP generator / discriminator, BCE loss              (Goodfellow et al., 2014)
-  dcgan   : convolutional G/D + BatchNorm, non-saturating loss    (Radford et al., 2015)
-  wgan_gp : Wasserstein critic + gradient penalty, 5 critic steps (Gulrajani et al., 2017)
-Training strategies toggled by flags: --label_smooth (one-sided smoothing 0.9), Adam betas, n_critic.
-
-Quality evaluation (no internet needed, MNIST-specific analogues of IS / FID):
-  * a small CNN classifier is trained on MNIST;
-  * Inception-Score-style: exp(E[KL(p(y|x) || p(y))])  (higher = sharper & more diverse; max 10)
-  * FID-style: Frechet distance between classifier-feature Gaussians of real vs generated (lower = better)
-
-Run: python part_c_gan.py --epochs 30
-"""
 import argparse, json, os, time
 import numpy as np, torch, torch.nn as nn, torch.nn.functional as F
 from scipy import linalg
@@ -153,7 +139,7 @@ def main():
     p.add_argument("--lr", type=float, default=2e-4); p.add_argument("--label_smooth", action="store_true")
     p.add_argument("--variants", nargs="+", default=["vanilla", "dcgan", "wgan_gp"])
     p.add_argument("--root", default="./data"); p.add_argument("--out", default="outputs_c")
-    a = p.parse_args(); os.makedirs(a.out, exist_ok=True)
+    a = p.parse_args([]); os.makedirs(a.out, exist_ok=True)
     device = "cuda" if torch.cuda.is_available() else ("mps" if torch.backends.mps.is_available() else "cpu")
     tf = transforms.Compose([transforms.ToTensor(), transforms.Normalize(0.5, 0.5)])   # -> [-1, 1]
     train = datasets.MNIST(a.root, True, tf, download=True); test = datasets.MNIST(a.root, False, tf, download=True)
